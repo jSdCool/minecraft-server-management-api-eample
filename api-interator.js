@@ -349,7 +349,12 @@ class SchemaObj{
     }
 
     isEmpty(){
-        return false;
+        for(let i = 0; i < this.elements.length; i++) {
+            if(!this.elements[i].isEmpty()){
+                return false;
+            }
+        }
+        return true;
     }
 
     getJson(){
@@ -451,12 +456,20 @@ class SchemaArray extends SchemaObj{
     }
 
     isEmpty() {
-        return false;
+        for(let i = 0; i < this.elements.length; i++) {
+            if(!this.elements[i].isEmpty()){
+                return false;
+            }
+        }
+        return true;
     }
 
     getJson(){
         let outputArray = []
         for(let i = 0; i < this.elements.length; i++) {
+            if(this.elements[i].isEmpty()){
+                continue;
+            }
             outputArray.push(this.elements[i].getJson());
         }
         return outputArray;

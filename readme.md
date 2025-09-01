@@ -27,3 +27,6 @@ Set the server render distance to 25
 Kick the player named jeff  
 `{"id":0, "method": "minecraft:players/kick", "params":[[{"name":"jeff"}]]}`
 
+
+### Issue
+There currently appears to be a bug with the kick command, the provided documentation suggest that an array is required but then game complains if one is supplied
