@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MCMP-API</title>
+    <script src="api-interator.js"></script>
+    <script src="notifications.js"></script>
+    <style>
+        input#payload {
+            width: 50em;
+        }
+
+        table#commands-table {
+            border-width: thin;
+            border-style: groove;
+        }
+
+        td {
+            border-style: groove;
+        }
+
+        .red{
+            color: red;
+        }
+
+        /* Notification container */
+        #notifications {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 9999;
+        }
+
+        /* Individual notification */
+        .notification {
+            background-color: #333;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.3s forwards;
+        }
+
+        /* Animation for appearing */
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Animation for disappearing */
+        .fade-out {
+            animation: fadeOut 0.5s forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="connect-info">
+        Enter MCMP-API URL:<br>
+        <label for="connect-ip"></label><input class = "connect-ip" type="text" placeholder="localhost" id="connect-ip" value="127.0.0.1">
+        <label for="connect-port"></label><input type="number" class = "connect-port" placeholder="port" id="connect-port" min="0" max="65535" value="25585"><br>
+        <button id="connect" onclick="connectToApi()">Connect</button>
+    </div>
+    <div id="management-area" hidden>
+
+        Commands:<br>
+        <table id="commands-table">
+            <tr>
+                <td>Name</td>
+                <td>Description</td>
+                <td>parameters<br>name:type</td>
+            </tr>
+        </table>
+        Manage:<br>
+        send manual JSON payload: <label for="payload"></label><input type="text" id="payload"> <button id="send" onclick="sendPayload()">Send</button><br>
+        Send auto payload: method:<label for="payload_method"></label><input type="text" id="payload_method"> Parameters:<label for="payload_params"></label><input type="text" id = "payload_params"><button onclick="sendAutoPayload()">Send</button><br>
+        <div id="response-area">
+            Response:<br>
+            <span id="response"></span>
+        </div>
+    </div>
+
+    <!-- Notification container -->
+    <div id="notifications"></div>
+</body>
+</html>
