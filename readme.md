@@ -27,10 +27,3 @@ Set the server render distance to 25
 Kick the player named jeff  
 `{"id":0, "method": "minecraft:players/kick", "params":[[{"name":"jeff"}]]}`
 
-### Example auto payload
-List all banned Ips  
-method: `minecraft:ip_bans`  
-Set the server render distance to 25  
-method: `minecraft:serversettings/view_distance/set` Parameters: `25`  
-Kick the player named jeff  
-method: `minecraft:players/kick` Parameters: `[{"name":"jeff"}]`
