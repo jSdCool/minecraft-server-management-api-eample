@@ -2,7 +2,9 @@ let connected = false;
 let webSocket;
 
 const DISCOVER_ID = -352465185;
-let usedIds = 0
+let usedIds = 0;
+
+let discovery = {}
 
 //{"id":-8976,"method":"rpc.discover"}
 
@@ -41,6 +43,7 @@ function connectToApi(){
             if(messageId !== undefined && isKnownMessageId(messageId)){
                 //if it is a known message ID then process it by ID
                 if(messageId === DISCOVER_ID){
+                    discovery = messageResult
                     handleMethodDescription(messageResult)
                     return;
                 }
@@ -80,20 +83,20 @@ function sendPayload(){
 //{"players":[], "message": ""}
 function sendAutoPayload(){
     let stringMethod = document.getElementById('payload_method').value;
-    let stringParameters = document.getElementById('payload_params').value;
-    let payloadJson;
-    if(stringParameters !== ""){
-        payloadJson = {
-            method: stringMethod,
-            params: [JSON.parse(stringParameters)],
-            id: usedIds++
-        };
-    }else{
-        payloadJson = {
-            method: stringMethod,
-            id: usedIds++
-        }
+    let paramsDiv = document.getElementById('payload_params');
+    let paramsParentElement = paramsDiv.children[0]
+    let paramsObj = paramsParentElement.structureObj;
+
+    let payloadJson = {
+        method: stringMethod,
+        id: usedIds++
+    };
+    if(!paramsObj.isEmpty()){
+        let params = []
+        params[0] = paramsObj.getJson();
+        payloadJson.params = params;
     }
+
 
     console.log(JSON.stringify(payloadJson));
     webSocket.send(JSON.stringify(payloadJson));
@@ -128,7 +131,7 @@ function handleMethodDescription(descriptionJson){
         let descriptionCell = document.createElement('td');
         let paramCell = document.createElement('td');
         //populate the elements
-        nameCell.innerHTML = "<button onclick='preFillMethodField(\""+methods[method].name+"\")'>"+methods[method].name+"</button>";
+        nameCell.innerHTML = "<button onclick='preFillMethodField(\""+methods[method].name+"\","+method+")'>"+methods[method].name+"</button>";
         descriptionCell.innerHTML = methods[method].description;
 
         //parameter parsing
@@ -182,8 +185,27 @@ function handleMethodDescription(descriptionJson){
     }
 }
 
-function preFillMethodField(methodName){
+function preFillMethodField(methodName, methodIndex) {
     document.getElementById("payload_method").value = methodName;
+    let parametersDiv = document.getElementById('payload_params');
+    parametersDiv.innerHTML = '';//clear any existing parameters
+
+    let paramsJsonRaw = discovery.methods[methodIndex].params
+    let paramsSchemaStructure
+    if (paramsJsonRaw.length === 0) {
+        paramsSchemaStructure = new SchemaEmpty()
+    } else {
+        let paramsSchema = unPackSchema(paramsJsonRaw[0].schema);
+        paramsSchemaStructure = parseSchemaToObjects(paramsSchema);
+
+        parametersDiv.innerHTML = paramsJsonRaw[0].name+": ";
+    }
+
+
+
+    let paramsHtml = paramsSchemaStructure.getHtml();
+    paramsHtml.structureObj = paramsSchemaStructure;
+    parametersDiv.appendChild(paramsHtml);
 }
 
 function handleNotification(methodName, params){
@@ -242,7 +264,248 @@ function handleNotification(methodName, params){
         case "notification:server/status":
             notificationMessage += "Server status: "+((params[0].started)?"Online":"Offline")+" version: "+params[0].version.name+" "+params[0].value.name[0].players.length+" players online";
             break;
+        default:
+            notificationMessage += JSON.stringify(params[0]);
     }
 
     showNotification(notificationMessage);
+}
+
+//unPackSchema(discovery.methods[1].params[0].schema)
+
+/**Resolve ay schemea refs
+ * @param parent The schema object to resolve
+ * @returns {any} the complete schema
+ */
+function unPackSchema(parent){
+    let copyObj = JSON.parse(JSON.stringify(parent))
+
+    let keys = Object.keys(copyObj);
+    for(let key of keys){
+
+        //if the only key in this schema is a reference to another schema
+        if(key === "$ref"){
+            let ref = copyObj[key]
+            let refParts = ref.split("/");
+            //remove the first element of the refs(the #)
+            refParts.reverse();
+            refParts.pop();
+            refParts.reverse();
+            let refObj = discovery
+            //drill down into the referenced path until at the wanted end point
+            for(let refPart in refParts){
+                refObj = refObj[refParts[refPart]];
+            }
+            refObj = refObj.properties;
+            copyObj = unPackSchema(refObj);//make a copy of the schema object and resolve any nested references
+        } else if(Object.keys(copyObj[key]).includes("items")) {//nested arrays that need further unpacking
+            if(Object.keys(copyObj[key].items).includes("$ref")){
+                let ref = copyObj[key].items.$ref;
+                let refParts = ref.split("/");
+                //remove the first element of the refs(the #)
+                refParts.reverse();
+                refParts.pop();
+                refParts.reverse();
+                let refObj = discovery
+                //drill down into the referenced path until at the wanted end point
+                for(let refPart in refParts){
+                    refObj = refObj[refParts[refPart]];
+                }
+                refObj = refObj.properties;
+                copyObj[key].items = unPackSchema(refObj);//make a copy of the schema object and resolve any nested references
+            }
+        }else if(Object.keys(copyObj[key]).includes("$ref")){ //if a sub property contains a reference to a schema
+            let ref = copyObj[key].$ref;
+            let refParts = ref.split("/");
+            //remove the first element of the refs(the #)
+            refParts.reverse();
+            refParts.pop();
+            refParts.reverse();
+            let refObj = discovery
+            //drill down into the referenced path until at the wanted end point
+            for(let refPart in refParts){
+                refObj = refObj[refParts[refPart]];
+            }
+            refObj = refObj.properties;
+            copyObj[key] = unPackSchema(refObj);//make a copy of the schema object and resolve any nested references
+        }
+    }
+
+    return copyObj
+}
+
+//Schema object for html input things
+class SchemaObj{
+
+    constructor(schemaObj){
+        this.elements = []
+        this.elementNames = []
+        //create all the internal properties
+        let keys = Object.keys(schemaObj);
+        for(let i =0; i < keys.length; i++){
+            this.elementNames.push(keys[i]);
+            this.elements.push(parseSchemaToObjects(schemaObj[keys[i]]));
+        }
+    }
+
+    isEmpty(){
+        return false;
+    }
+
+    getJson(){
+        let obj ={}
+        for(let i = 0; i < this.elements.length; i++) {
+            //if there is something to add:
+            if(!this.elements[i].isEmpty()){
+                obj[this.elementNames[i]]=this.elements[i].getJson();
+            }
+        }
+        return obj;
+    }
+
+    getHtml(){
+        let propertiesDiv = document.createElement("div");
+
+        for(let i = 0; i < this.elements.length; i++) {
+            //if this does not work, what we could do is make the prop name a newly created span and the line break another newly created element
+            let ne = document.createElement("span");
+            ne.textContent = this.elementNames[i]+": "
+            propertiesDiv.appendChild(ne);
+            propertiesDiv.appendChild(this.elements[i].getHtml())
+            propertiesDiv.appendChild(document.createElement("br"));
+        }
+        propertiesDiv.classList.add("schema-div")
+        return propertiesDiv;
+    }
+
+}
+
+class SchemaString extends SchemaObj{
+    constructor() {
+        super({});
+        this.valueInput = document.createElement("input");
+    }
+
+    isEmpty() {
+        let inputValue = this.valueInput.value.trim();
+        return inputValue === undefined || inputValue === null || inputValue === "";
+    }
+
+    getJson(){
+        return this.valueInput.value;
+    }
+
+    getHtml() {
+        return this.valueInput;
+    }
+}
+
+class SchemaInt extends SchemaObj{
+    constructor() {
+        super({});
+        this.valueInput = document.createElement("input");
+        this.valueInput.setAttribute("type", "number");
+    }
+
+    isEmpty() {
+        let inputValue = this.valueInput.value;
+        return inputValue === undefined || inputValue === null || inputValue === "";
+    }
+
+    getJson(){
+        return Number(this.valueInput.value);
+    }
+
+    getHtml() {
+        return this.valueInput;
+    }
+}
+
+class SchemaBoolean extends SchemaObj{
+    constructor() {
+        super({});
+        this.valueInput = document.createElement("input");
+        this.valueInput.setAttribute("type", "checkbox");
+    }
+
+    isEmpty() {
+        return false;
+    }
+
+    getJson(){
+        return this.valueInput.value === "on";
+    }
+
+    getHtml() {
+        return this.valueInput;
+    }
+}
+
+class SchemaArray extends SchemaObj{
+    constructor(schemaObj) {
+        super({});
+        //parse the incoming object schema and add one to the elements
+        this.schema = schemaObj;
+        //add one object to the schema to start off with
+        this.elements.push(parseSchemaToObjects(schemaObj));
+    }
+
+    isEmpty() {
+        return false;
+    }
+
+    getJson(){
+        let outputArray = []
+        for(let i = 0; i < this.elements.length; i++) {
+            outputArray.push(this.elements[i].getJson());
+        }
+        return outputArray;
+    }
+
+    getHtml() {
+        let arrayDiv = document.createElement("div");
+        for(let i = 0; i < this.elements.length; i++) {
+            arrayDiv.appendChild(this.elements[i].getHtml())
+            arrayDiv.appendChild(document.createElement("br"));
+        }
+        arrayDiv.classList.add("schema-div")
+        arrayDiv.classList.add("schema-array")
+        return arrayDiv;
+    }
+}
+
+class SchemaEmpty extends SchemaObj{
+    constructor() {
+        super({});
+    }
+
+    isEmpty() {
+        return true;
+    }
+
+    getJson(){
+        return []
+    }
+
+    getHtml() {
+        return document.createElement("div")//its empty return an empty div
+    }
+}
+
+function parseSchemaToObjects(schema){
+    let type = schema.type;
+    switch(type){
+        case undefined:
+        case null:
+            return new SchemaObj(schema);
+        case "string":
+            return new SchemaString();
+        case "integer":
+            return new SchemaInt();
+        case "boolean":
+            return new SchemaBoolean();
+        case "array":
+            return new SchemaArray(schema.items);
+    }
+    return new SchemaEmpty();
 }

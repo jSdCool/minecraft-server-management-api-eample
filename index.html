@@ -65,6 +65,25 @@
                 transform: translateY(20px);
             }
         }
+
+        div#payload_params {
+            border-style: solid;
+            border-width: thin;
+            padding: 0.4em;
+            display: flex
+        }
+
+        .schema-div {
+            border-style: solid;
+            border-width: thin;
+            padding: 0.3em;
+            background-color: lightgreen;
+        }
+
+        .schema-array {
+            background-color: burlywood;
+        }
+
     </style>
 </head>
 <body>
@@ -86,7 +105,9 @@
         </table>
         Manage:<br>
         send manual JSON payload: <label for="payload"></label><input type="text" id="payload"> <button id="send" onclick="sendPayload()">Send</button><br>
-        Send auto payload: method:<label for="payload_method"></label><input type="text" id="payload_method"> Parameters:<label for="payload_params"></label><input type="text" id = "payload_params"><button onclick="sendAutoPayload()">Send</button><br>
+        Send auto payload: method:<label for="payload_method"></label><input type="text" id="payload_method" disabled><br>
+        Parameters:<div id="payload_params"></div>
+        <button onclick="sendAutoPayload()">Send</button><br>
         <div id="response-area">
             Response:<br>
             <span id="response"></span>
