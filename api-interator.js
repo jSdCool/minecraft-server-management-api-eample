@@ -453,6 +453,30 @@ class SchemaArray extends SchemaObj{
         this.schema = schemaObj;
         //add one object to the schema to start off with
         this.elements.push(parseSchemaToObjects(schemaObj));
+
+        this.addButton = document.createElement("button");
+        this.addButton.innerHTML = "+"
+        this.addButton.onclick = (evt) => {
+            this.addArrayElement()
+        }
+        this.removeButton = document.createElement("button");
+        this.removeButton.innerHTML = "-";
+        this.removeButton.onclick = (evt) => {
+            if(this.elements.length > 0){
+                this.removeArrayElement()
+            }
+        }
+
+        this.arrayDiv = document.createElement("div");
+        this.arrayDiv.appendChild(this.addButton);
+        this.arrayDiv.appendChild(this.removeButton);
+
+        for(let i = 0; i < this.elements.length; i++) {
+            this.arrayDiv.appendChild(this.elements[i].getHtml())
+            this.arrayDiv.appendChild(document.createElement("br"));
+        }
+        this.arrayDiv.classList.add("schema-div")
+        this.arrayDiv.classList.add("schema-array")
     }
 
     isEmpty() {
@@ -476,14 +500,19 @@ class SchemaArray extends SchemaObj{
     }
 
     getHtml() {
-        let arrayDiv = document.createElement("div");
-        for(let i = 0; i < this.elements.length; i++) {
-            arrayDiv.appendChild(this.elements[i].getHtml())
-            arrayDiv.appendChild(document.createElement("br"));
-        }
-        arrayDiv.classList.add("schema-div")
-        arrayDiv.classList.add("schema-array")
-        return arrayDiv;
+        return this.arrayDiv;
+    }
+
+    addArrayElement(){
+        this.elements.push(parseSchemaToObjects(this.schema));
+        this.arrayDiv.appendChild(this.elements[this.elements.length-1].getHtml())
+        this.arrayDiv.appendChild(document.createElement("br"));
+    }
+
+    removeArrayElement(){
+        this.arrayDiv.removeChild(this.arrayDiv.lastElementChild);
+        this.arrayDiv.removeChild(this.arrayDiv.lastElementChild);
+        this.elements.pop();
     }
 }
 
