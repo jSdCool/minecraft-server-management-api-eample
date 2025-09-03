@@ -92,10 +92,11 @@
     </style>
 </head>
 <body>
+    <h1>Minecraft Server Management Protocol API Interface</h1>
     <div id="connect-info">
         Enter MCMP-API URL:<br>
-        <label for="connect-ip"></label><input class = "connect-ip" type="text" placeholder="localhost" id="connect-ip" value="127.0.0.1">
-        <label for="connect-port"></label><input type="number" class = "connect-port" placeholder="port" id="connect-port" min="0" max="65535" value="25585"><br>
+        ip: <label for="connect-ip"></label><input class = "connect-ip" type="text" placeholder="localhost" id="connect-ip" value="127.0.0.1">
+        port: <label for="connect-port"></label><input type="number" class = "connect-port" placeholder="port" id="connect-port" min="0" max="65535" value="25585"><br>
         <button id="connect" onclick="connectToApi()">Connect</button>
     </div>
     <div id="management-area" hidden>
