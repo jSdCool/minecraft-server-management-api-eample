@@ -1,5 +1,9 @@
 # Minecraft Server Management API example
 ----
+# BORKEN!
+In snapshot 25w37a a new authorization method was introduced, this makes it impossible to interact with the protocol from a browser!  
+this tool only works for version before 25w37a
+
 In snapshot 25W35A mojang added the Minecraft server management API to minecraft
 This repo aims to take that new system for a test drive and show off its functionality 
 
